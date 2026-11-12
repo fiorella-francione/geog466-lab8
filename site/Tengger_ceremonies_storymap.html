@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ceremonies of the Tengger Highlands – Story Map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+  :root{
+    --ink:#1f2420; --paper:#faf6ee; --muted:#6b6a5f; --line:#e3dccb;
+    --kasada:#d98324; --karo:#1f8a82; --unan:#b8323f;
+    --serif:'Fraunces',Georgia,'Times New Roman',serif;
+    --sans:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;font-family:var(--sans);color:var(--ink);background:#d9d4c5}
+  #map{position:fixed;inset:0;z-index:0}
+
+  /* ---------- Title block ---------- */
+  #title{position:fixed;z-index:800;top:12px;left:12px;max-width:340px;background:var(--paper);
+    border:1px solid var(--line);border-radius:10px;padding:12px 16px;box-shadow:0 2px 12px rgba(0,0,0,.18)}
+  #title h1{font:700 1.2rem/1.2 var(--serif);margin:0 0 4px}
+  #title p{margin:0;font-size:.78rem;color:var(--muted);line-height:1.35}
+  .leaflet-top.leaflet-left{top:112px}
+
+  /* ---------- Progress bar ---------- */
+  #progress{position:fixed;z-index:900;top:0;left:0;height:4px;width:0;background:linear-gradient(90deg,var(--kasada),var(--karo),var(--unan))}
+
+  /* ---------- Narrative column ---------- */
+  #story{position:relative;z-index:700;width:min(420px,100%);margin-left:auto;pointer-events:none}
+  .step{min-height:100vh;display:flex;align-items:center;padding:28px 20px}
+  .card{pointer-events:auto;width:100%;background:rgba(250,246,238,.97);border:1px solid var(--line);
+    border-radius:14px;padding:20px 20px 18px;box-shadow:0 6px 28px rgba(0,0,0,.25);
+    opacity:.35;transform:translateY(24px);transition:opacity .6s ease,transform .6s ease}
+  .step.active .card{opacity:1;transform:none}
+  .badge{display:inline-flex;align-items:center;gap:6px;font-size:.7rem;font-weight:600;letter-spacing:.06em;
+    text-transform:uppercase;color:#fff;padding:3px 10px;border-radius:99px}
+  .count{font-size:.72rem;color:var(--muted);margin-left:8px;font-weight:500}
+  .card h2{font:700 1.45rem/1.2 var(--serif);margin:10px 0 8px}
+  .card p{font-size:.92rem;line-height:1.55;margin:0 0 12px}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 14px;padding:0;list-style:none}
+  .chips li{font-size:.72rem;padding:3px 9px;border-radius:99px;border:1px solid var(--line);background:#fff;color:#3b3a33}
+  figure{margin:0 0 10px}
+  .imgbox{height:170px;border-radius:8px;overflow:hidden;background:#e8e2d2;display:flex;align-items:center;
+    justify-content:center;text-align:center;color:var(--muted);font-size:.78rem;padding:10px}
+  .imgbox img{width:100%;height:100%;object-fit:cover;display:block}
+  figcaption{font-size:.78rem;line-height:1.45;color:#3b3a33;margin-top:7px}
+  .credit{font-size:.7rem;color:var(--muted);line-height:1.4;margin-top:3px}
+  .credit a{color:inherit}
+  .note{font-size:.7rem;font-style:italic;color:var(--muted);border-top:1px solid var(--line);padding-top:8px;margin:0}
+  .hint{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:.78rem;color:var(--muted)}
+  .hint span{display:inline-block;animation:bob 1.4s ease-in-out infinite}
+  @keyframes bob{50%{transform:translateY(5px)}}
+  .sources{padding-left:18px;margin:0 0 12px;font-size:.82rem;line-height:1.5}
+  button.top{font:600 .8rem var(--sans);background:var(--ink);color:#fff;border:0;border-radius:8px;padding:8px 14px;cursor:pointer}
+
+  /* ---------- Markers ---------- */
+  .pin{width:30px;height:30px;border-radius:50%;border:3px solid #fff;color:#fff;font:700 13px/24px var(--sans);
+    text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.45);transition:transform .35s ease;cursor:pointer}
+  .pin.on{transform:scale(1.35);box-shadow:0 0 0 0 rgba(255,255,255,.9),0 3px 10px rgba(0,0,0,.5);animation:pulse 1.8s infinite}
+  @keyframes pulse{70%{box-shadow:0 0 0 14px rgba(255,255,255,0),0 3px 10px rgba(0,0,0,.5)}100%{box-shadow:0 0 0 0 rgba(255,255,255,0),0 3px 10px rgba(0,0,0,.5)}}
+  .lbl{background:var(--paper);border:1px solid var(--line);border-radius:6px;font:600 .72rem var(--sans);color:var(--ink);box-shadow:0 1px 5px rgba(0,0,0,.3)}
+  .lbl:before{display:none}
+
+  /* ---------- Legend ---------- */
+  .legend{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:.75rem;
+    box-shadow:0 2px 10px rgba(0,0,0,.2);min-width:190px}
+  .legend summary{cursor:pointer;font-weight:600;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .legend summary::-webkit-details-marker{display:none}
+  .legend .row{display:flex;align-items:center;gap:8px;margin-top:6px;line-height:1.2}
+  .sw{width:14px;height:14px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.35);flex:none}
+  .ln{width:22px;height:0;border-top:3px solid var(--kasada);flex:none}
+  .ln.dot{border-top:2px dotted #5a5a50}
+  .ar{width:22px;height:14px;border-radius:50%;border:2px dashed var(--kasada);background:rgba(217,131,36,.2);flex:none}
+  .legend h4{margin:8px 0 0;font-size:.68rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+
+  .leaflet-control-layers{border-radius:10px !important;font-family:var(--sans);font-size:.78rem}
+
+  @media (max-width:720px){
+    #title{max-width:calc(100% - 24px);padding:8px 12px}
+    #title h1{font-size:1rem}
+    #title p{display:none}
+    .leaflet-top.leaflet-left{top:60px}
+    .step{align-items:flex-end;padding:16px 12px 20px}
+    .imgbox{height:110px}
+    .card h2{font-size:1.2rem}
+    .card p{font-size:.86rem}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .card{transition:none}.pin.on,.hint span{animation:none}
+  }
+</style>
+</head>
+<body>
+<div id="progress"></div>
+<div id="title">
+  <h1>Ceremonies of the Tengger Highlands</h1>
+  <p>A scroll-through map of five sacred places around Mount Bromo, East Java</p>
+</div>
+<div id="map" aria-label="Interactive map of Tengger ceremonial places"></div>
+<main id="story"></main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+/* ------------------------------------------------------------------
+   DATA  (from tengger_ceremonies_storymap.csv)
+   ------------------------------------------------------------------ */
+const COLORS = {'Yadnya Kasada':'#d98324','Yadnya Karo':'#1f8a82','Unan-Unan':'#b8323f'};
+
+const STOPS = [
+  {
+    name:'Mount Widodaren',
+    lat:-7.9507, lng:112.9372, zoom:14,
+    ceremony:'Yadnya Kasada', ceremonyLabel:'Yadnya Kasada',
+    desc:'The day before Yadnya Kasada, Tengger community members perform Melasti, a purification ceremony, at a water source on Mount Widodaren. Participants cleanse themselves and their ceremonial equipment in preparation for the offerings. Water represents purification and the relationship between the community, the natural environment and the divine.',
+    themes:['Purification','Spirituality','Water','Preparation','Sacred nature'],
+    img:null, link:'https://mapcarta.com/15588812',
+    caption:'Mount Widodaren, part of the Tengger volcanic landscape. Its water source is used during the Melasti purification ceremony preceding Yadnya Kasada.',
+    credit:'Geographical reference: Mapcarta – consult the page for image and data credits.',
+    credName:'Mapcarta',
+    note:'Ceremony description derived from Astina et al. (2021). Coordinates are approximate and should be checked against an authoritative GIS layer before publication.'
+  },
+  {
+    name:'Luhur Poten Temple',
+    lat:-7.942021, lng:112.951984, zoom:15,
+    ceremony:'Yadnya Kasada', ceremonyLabel:'Yadnya Kasada · wider Tengger ceremonial landscape',
+    desc:'Located in the Sea of Sand at the foot of Mount Bromo, Luhur Poten Temple serves as the central meeting point (Pancer) of the Tengger ceremonial landscape. During Yadnya Kasada, community members gather here for prayers and the preparation of offerings before proceeding towards the crater. It represents the spiritual centre of the community.',
+    themes:['Sacred space','Community','Prayer','Cultural identity','Spiritual unity'],
+    img:'https://commons.wikimedia.org/wiki/Special:FilePath/Pura_Luhur_Poten_in_Bromo.jpg?width=900',
+    link:'https://commons.wikimedia.org/wiki/File:Pura_Luhur_Poten_in_Bromo.jpg',
+    caption:'Pura Luhur Poten, the sacred temple situated in the Sea of Sand near Mount Bromo. It serves as the ceremonial centre of the Tengger community.',
+    credit:'Wikimedia Commons, file “Pura Luhur Poten in Bromo.jpg” – check the file page for photographer, date and licence.',
+    credName:'Wikimedia Commons',
+    note:'Ceremony description and role as Pancer derived from Astina et al. (2021). Coordinates are approximate.'
+  },
+  {
+    name:'Mount Bromo Crater',
+    lat:-7.942, lng:112.95, zoom:15,
+    ceremony:'Yadnya Kasada', ceremonyLabel:'Yadnya Kasada',
+    desc:'At midnight during Yadnya Kasada, Tengger participants travel towards Mount Bromo’s crater to present sacred offerings called banten and ongkek. These include flowers, leaves, fruits and cakes, alongside other agricultural and livestock products. The offerings express gratitude to God and the ancestors and symbolically seek harmony and fertility in nature.',
+    themes:['Offering','Sacrifice','Gratitude','Devotion','Nature','Ancestral beliefs'],
+    img:'https://commons.wikimedia.org/wiki/Special:FilePath/Ritual_Kasada.jpg?width=900',
+    link:'https://commons.wikimedia.org/wiki/File:Ritual_Kasada.jpg',
+    caption:'Yadnya Kasada offerings are presented at the crater of Mount Bromo.',
+    credit:'Wikimedia Commons, file “Ritual Kasada.jpg” – check the file page for photographer, date and licence.',
+    credName:'Wikimedia Commons',
+    note:'Offering destination and ritual details derived from Astina et al. (2021). Coordinates are approximate; the crater is an area rather than a single point.'
+  },
+  {
+    name:'Baledono Village, Tosari',
+    lat:-7.8601, lng:112.8922, zoom:13.5,
+    ceremony:'Yadnya Karo', ceremonyLabel:'Yadnya Karo',
+    desc:'Baledono Village in Tosari District is the research location of the 2025 study on the symbolic meaning of Karo offerings. The ceremony connects households with their ancestors through prayers and offerings. During the santi ritual, families present carefully arranged food, flowers and other symbolic objects, reinforcing spiritual relationships and community identity.',
+    themes:['Ancestry','Family','Community','Gratitude','Cultural identity','Togetherness'],
+    img:null, link:'https://www.lensculture.com/submissions/aa590ef6-232c-45cd-bc1d-32bc2a64ebc7/public',
+    caption:'Photographic documentation of Karo practices in the Tengger community.',
+    credit:'LensCulture submission – confirm the individual photographer and image-reuse permission before publication.',
+    credName:'LensCulture',
+    note:'Village and ritual description derived from Wardani and Sinduwiatmo (2025). Coordinates are approximate village-level coordinates and require verification.'
+  },
+  {
+    name:'Wonokerso Village, Probolinggo',
+    lat:-7.9453, lng:113.028, zoom:13.5,
+    ceremony:'Unan-Unan', ceremonyLabel:'Unan-Unan',
+    desc:'Unan-Unan is a purification ceremony performed every five years to protect a village from danger and spiritual disturbances. It involves large quantities of offerings and buffalo sacrifice, led by a traditional shaman. A documented example in Wonokerso describes villagers carrying offerings in a procession as part of the ceremony.',
+    themes:['Purification','Protection','Sacrifice','Renewal','Collective responsibility'],
+    img:null, link:'https://www.detik.com/jatim/foto/d-7306876/potret-desa-tertua-suku-tengger-gelar-upacara-adat-unan-unan',
+    caption:'Tengger community members perform the five-yearly Unan-Unan ceremony in Wonokerso Village, Probolinggo.',
+    credit:'detikJatim – credit the photographer named on the article page; image reuse may require permission.',
+    credName:'detikJatim',
+    note:'The 2021 article describes Unan-Unan as taking place in Punden village but does not identify its exact location. Wonokerso is a separately documented example reported in 2024. Coordinates are approximate and should be verified.'
+  }
+];
+
+/* ------------------------------------------------------------------
+   NARRATIVE CARDS
+   ------------------------------------------------------------------ */
+const story = document.getElementById('story');
+const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function step(html){
+  const s = document.createElement('section');
+  s.className = 'step';
+  s.innerHTML = '<div class="card">' + html + '</div>';
+  story.appendChild(s);
+  return s;
+}
+
+step(`
+  <span class="badge" style="background:#3b3a33">Story map</span>
+  <h2>Ceremonies of the Tengger Highlands</h2>
+  <p>The Tengger people’s ceremonial calendar is tied to the volcanic landscape around Mount Bromo. Follow five places across three ceremonies: <b style="color:var(--kasada)">Yadnya Kasada</b>, <b style="color:var(--karo)">Yadnya Karo</b> and <b style="color:var(--unan)">Unan-Unan</b>.</p>
+  <div class="hint"><span>↓</span> Scroll to begin the journey</div>`);
+
+STOPS.forEach((s,i) => {
+  const c = COLORS[s.ceremony];
+  const img = s.img
+    ? `<img src="${s.img}" alt="${esc(s.name)}" loading="lazy" referrerpolicy="no-referrer"
+         onerror="this.parentNode.innerHTML='Image could not be loaded.<br>See the credit link below.'">`
+    : `Image hosted at the source.<br>Open the credit link below to view it.`;
+  step(`
+    <span class="badge" style="background:${c}">${esc(s.ceremonyLabel)}</span><span class="count">Stop ${i+1} of ${STOPS.length}</span>
+    <h2>${esc(s.name)}</h2>
+    <p>${esc(s.desc)}</p>
+    <ul class="chips">${s.themes.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>
+    <figure>
+      <div class="imgbox">${img}</div>
+      <figcaption>${esc(s.caption)}</figcaption>
+      <div class="credit">${esc(s.credit)} <a href="${s.link}" target="_blank" rel="noopener">Open ${esc(s.credName)} ↗</a></div>
+    </figure>
+    <p class="note">${esc(s.note)}</p>`);
+});
+
+step(`
+  <span class="badge" style="background:#3b3a33">Sources &amp; notes</span>
+  <h2>End of the journey</h2>
+  <ul class="sources">
+    <li>Astina et al. (2021) – Yadnya Kasada, Luhur Poten, Mount Bromo crater, Unan-Unan</li>
+    <li>Wardani and Sinduwiatmo (2025) – Yadnya Karo, Baledono Village</li>
+    <li>detikJatim – Unan-Unan in Wonokerso Village</li>
+    <li>Basemap: OpenTopoMap / Esri (see map attribution)</li>
+  </ul>
+  <p class="note" style="border:0;padding:0">All coordinates are approximate and should be verified against an authoritative GIS layer. Check licences and photographer credits before publishing any image.</p>
+  <button class="top" id="toTop">↑ Back to start</button>`);
+
+const steps = [...document.querySelectorAll('.step')];   // 0 = intro, 1..5 = stops, 6 = outro
+
+/* ------------------------------------------------------------------
+   MAP
+   ------------------------------------------------------------------ */
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const map = L.map('map', {
+  zoomControl:false, attributionControl:false, scrollWheelZoom:false,
+  dragging:!L.Browser.mobile, tap:false, zoomSnap:0.25, minZoom:9, maxZoom:17
+});
+
+const topo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+  maxZoom:17, attribution:'Map data © OpenStreetMap contributors, SRTM | Style © <a href="https://opentopomap.org">OpenTopoMap</a> (CC-BY-SA)'
+});
+const esriTopo = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
+  maxZoom:17, attribution:'Tiles © Esri – World Topographic Map'
+});
+const esriImg = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+  maxZoom:17, attribution:'Tiles © Esri – Maxar, Earthstar Geographics, USDA FSA, USGS, GIS User Community'
+});
+const hill = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}', {
+  maxZoom:16, opacity:.45, attribution:'Hillshade © Esri'
+});
+topo.addTo(map);
+L.control.layers({'Terrain (contours & relief)':topo,'Esri topographic':esriTopo,'Satellite imagery':esriImg},
+                 {'Extra shaded relief':hill},{position:'topleft',collapsed:true}).addTo(map);
+
+/* cartographic furniture (added bottom-up: attribution, scale, legend) */
+L.control.attribution({position:'bottomleft',prefix:false}).addTo(map);
+L.control.scale({position:'bottomleft',imperial:false,maxWidth:120}).addTo(map);
+
+const legend = L.control({position:'bottomleft'});
+legend.onAdd = () => {
+  const d = L.DomUtil.create('details','legend');
+  d.open = innerWidth > 720;
+  d.innerHTML = `
+    <summary>Legend
+      <svg width="22" height="26" viewBox="0 0 22 26" aria-label="North arrow"><path d="M11 1 L17 20 L11 16 L5 20 Z" fill="#1f2420"/><text x="11" y="26" text-anchor="middle" font-size="8" font-family="sans-serif" font-weight="700" fill="#1f2420">N</text></svg>
+    </summary>
+    <h4>Ceremony</h4>
+    <div class="row"><i class="sw" style="background:#d98324"></i>Yadnya Kasada</div>
+    <div class="row"><i class="sw" style="background:#1f8a82"></i>Yadnya Karo</div>
+    <div class="row"><i class="sw" style="background:#b8323f"></i>Unan-Unan</div>
+    <h4>Symbols</h4>
+    <div class="row"><i class="ln"></i>Kasada procession route</div>
+    <div class="row"><i class="ln dot"></i>Link between ceremonies</div>
+    <div class="row"><i class="ar"></i>Crater area (approx.)</div>`;
+  L.DomEvent.disableClickPropagation(d);
+  return d;
+};
+legend.addTo(map);
+
+/* route + crater */
+const pts = STOPS.map(s => [s.lat, s.lng]);
+L.polyline([pts[0],pts[1],pts[2]], {color:COLORS['Yadnya Kasada'],weight:4,opacity:.95,dashArray:'8 6'}).addTo(map);
+L.polyline([pts[2],pts[3],pts[4]], {color:'#4a4a40',weight:2,opacity:.8,dashArray:'1 7',lineCap:'round'}).addTo(map);
+L.circle(pts[2], {radius:420,color:COLORS['Yadnya Kasada'],weight:2,dashArray:'5 5',fillColor:COLORS['Yadnya Kasada'],fillOpacity:.2}).addTo(map);
+
+/* markers */
+const markers = STOPS.map((s,i) => {
+  const icon = L.divIcon({className:'', iconSize:[30,30], iconAnchor:[15,15],
+    html:`<div class="pin" style="background:${COLORS[s.ceremony]}">${i+1}</div>`});
+  const m = L.marker([s.lat,s.lng], {icon, title:s.name, riseOnHover:true}).addTo(map);
+  m.bindTooltip(s.name, {direction:'top', offset:[0,-16], className:'lbl'});
+  m.on('click', () => steps[i+1].scrollIntoView({behavior: reduce ? 'auto' : 'smooth', block:'center'}));
+  return m;
+});
+
+/* ------------------------------------------------------------------
+   SCROLL → MAP ANIMATION
+   ------------------------------------------------------------------ */
+const bounds = L.latLngBounds(pts);
+const isMobile = () => innerWidth <= 720;
+
+function overview(){
+  const w = story.offsetWidth;
+  const opts = isMobile()
+    ? {paddingTopLeft:[30,100], paddingBottomRight:[30, innerHeight*0.5], duration:2.2, maxZoom:12}
+    : {paddingTopLeft:[40,130], paddingBottomRight:[w+30,60], duration:2.2, maxZoom:12};
+  reduce ? map.fitBounds(bounds, opts) : map.flyToBounds(bounds, opts);
+}
+
+function focusStop(i){
+  const s = STOPS[i], z = s.zoom;
+  let p = map.project([s.lat,s.lng], z);
+  p = isMobile() ? p.add([0, innerHeight*0.2]) : p.add([story.offsetWidth/2, 0]);
+  const c = map.unproject(p, z);
+  reduce ? map.setView(c, z) : map.flyTo(c, z, {duration:2.4, easeLinearity:.25});
+}
+
+let current = -1;
+function activate(idx){
+  if (idx === current) return;
+  current = idx;
+  steps.forEach((el,k) => el.classList.toggle('active', k === idx));
+  markers.forEach((m,k) => {
+    const on = (idx === k+1);
+    m.getElement()?.querySelector('.pin')?.classList.toggle('on', on);
+    on ? m.openTooltip() : m.closeTooltip();
+  });
+  if (idx >= 1 && idx <= STOPS.length) focusStop(idx-1); else overview();
+}
+
+const io = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) activate(steps.indexOf(e.target)); });
+}, {rootMargin:'-45% 0px -45% 0px'});
+steps.forEach(s => io.observe(s));
+
+/* progress bar */
+addEventListener('scroll', () => {
+  const h = document.documentElement.scrollHeight - innerHeight;
+  document.getElementById('progress').style.width = (h > 0 ? scrollY / h * 100 : 0) + '%';
+}, {passive:true});
+
+document.getElementById('toTop').addEventListener('click', () =>
+  scrollTo({top:0, behavior: reduce ? 'auto' : 'smooth'}));
+
+/* initial view */
+map.fitBounds(bounds, {paddingTopLeft:[40,130], paddingBottomRight:[(isMobile()?30:story.offsetWidth+30), isMobile()?innerHeight*0.5:60], maxZoom:12});
+activate(0);
+addEventListener('resize', () => { const k = current; current = -2; activate(k); });
+</script>
+</body>
+</html>
